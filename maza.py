@@ -50,12 +50,22 @@ def check_string_in_file(file_to_check, string):
     return False
 
 def restart_dnsmasq():
-    sys.stdout.write("\033[0;32m")
-    subprocess.run(["brew", "services", "stop", "dnsmasq"])
-    print("service dnsmasq stopped")
-    subprocess.run(["brew", "services", "start", "dnsmasq"])
-    print("service dnsmasq started")
-    sys.stdout.write("\033[0;0m")
+    if os.path.isfile('/usr/local/bin/brew'):
+        sys.stdout.write("\033[0;32m")
+        subprocess.run(["brew", "services", "stop", "dnsmasq"])
+        print("service dnsmasq stopped")
+        subprocess.run(["brew", "services", "start", "dnsmasq"])
+        print("service dnsmasq started")
+        sys.stdout.write("\033[0;0m")
+    else:
+        sys.stdout.write("\033[0;32m")
+        subprocess.run(["systemctl", "stop", "dnsmasq"])
+        print("service dnsmasq stopped")
+        subprocess.run(["systemctl", "start", "dnsmasq"])
+        print("service dnsmasq started")
+        subprocess.run(["systemctl", "enable", "dnsmasq"])
+        print("service dnsmasq enabled")
+        sys.stdout.write("\033[0;0m")
 
 def main():
     url = "https://pgl.yoyo.org/adservers/serverlist.php?showintro=0&mimetype=plaintext"
