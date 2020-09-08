@@ -21,7 +21,6 @@ def create_dnsmasq_conf(ad_server,dns_conf):
                 f2.write('address=/' + line.split()[1] + '/' + line.split()[0] + '\n')
         f2.write('## END MAZA\n')
 
-
 def update_etc_hosts(dns_conf, hostsfile):
     with open(dns_conf, 'r') as dns_conf, open(hostsfile, 'a') as hostfile:
         for line in  dns_conf.readlines():
@@ -50,7 +49,7 @@ def check_string_in_file(file_to_check, string):
     return False
 
 def restart_dnsmasq():
-    if os.path.isfile('/usr/local/bin/brew'):
+    if sys.platform == 'darwin' and os.path.isfile('/usr/local/bin/brew'):
         sys.stdout.write("\033[0;32m")
         subprocess.run(["brew", "services", "stop", "dnsmasq"])
         print("service dnsmasq stopped")
@@ -66,20 +65,27 @@ def restart_dnsmasq():
         subprocess.run(["systemctl", "enable", "dnsmasq"])
         print("service dnsmasq enabled")
         sys.stdout.write("\033[0;0m")
-        
+
 def dns_config_file():
-    if os.path.isfile('/usr/local/etc/dnsmasq.conf'):
+    if sys.platform == 'darwin':
         return '/usr/local/etc/dnsmasq.conf'
     else:
         return '/etc/dnsmasq.conf'
 
+def dnsmasq_exe():
+    if sys.platform == 'darwin':
+        return '/usr/local/Cellar/dnsmasq'
+    else:
+        return '/usr/sbin/dnsmasq'
+
 def main():
     url = "https://pgl.yoyo.org/adservers/serverlist.php?showintro=0&mimetype=plaintext"
     conf_dir = os.getenv("HOME") + '/.maza' 
-    ad_server = conf_dir + "/adserver_list"
-    dns_conf = conf_dir + '/dnsmasq.conf'
+    ad_server = os.getenv("HOME") + '/.maza/adserver_list'
+    dns_conf = os.getenv("HOME") + '/.maza/dnsmasq.conf'
     hostsfile = '/etc/hosts'
     dnsmasq_config = dns_config_file()
+    dnsmasq_executeable = dnsmasq_exe()
     start_tag="## MAZA - List ad blocking"
     RED   = "\033[1;31m"  
     GREEN = "\033[0;32m"
@@ -90,7 +96,7 @@ def main():
     parser.add_argument('--stop', action='store_true', help='Deactivate blocking DNS.')
     parser.add_argument('--status', action='store_true', help='Check if it\'s active or not')
     parser.add_argument('--update', action='store_true', help='Update the list of DNS to be blocked')
-    parser.add_argument('--install', action='store_true', help='check if dnsmasq is installed and properarly configured')
+    parser.add_argument('--install', action='store_true', help='install dnsmasq on Mac or check if is installed and properarly configured')
     args = parser.parse_args()
 
     if args.start:
@@ -141,11 +147,23 @@ def main():
             print("files has been updated, sucessfully")
             sys.stdout.write(RESET)
     elif args.install:
-        if not os.path.isfile(dnsmasq_config):
-            print(f"{dnsmasq_config} missing.")
-            print("Please install dnsmasq and start the service")
+        if not os.path.isdir(dnsmasq_executeable):
+            print(f"{dnsmasq_executeable} missing.")
+            if sys.platform == 'darwin':
+                print("let's try to install dnsmasq via homebrew")
+                if os.path.isfile('/usr/local/bin/brew'):
+                    subprocess.run(["brew", "install", "dnsmasq"])
+                    with open(dnsmasq_config, 'a') as dnsmasq_conf:
+                        dnsmasq_conf.write("conf-file="+ dns_conf)
+                    sys.stdout.write(GREEN)
+                    print("dnsmasq is configured")
+                    sys.stdout.write(RESET)
+                else:
+                    print("Homebrew not installed please visit: https://docs.brew.sh/Installation")
+            else:
+                print("Please install dnsmasq via your package manager")
         else:
-            if  check_string_in_file(dnsmasq_config, dns_conf):
+            if check_string_in_file(dnsmasq_config, dns_conf):
                 sys.stdout.write(GREEN)
                 print("dnsmasq is configured")
                 sys.stdout.write(RESET)
