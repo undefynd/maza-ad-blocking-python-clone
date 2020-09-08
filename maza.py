@@ -66,6 +66,12 @@ def restart_dnsmasq():
         subprocess.run(["systemctl", "enable", "dnsmasq"])
         print("service dnsmasq enabled")
         sys.stdout.write("\033[0;0m")
+        
+def dns_config_file():
+    if os.path.isfile('/usr/local/etc/dnsmasq.conf'):
+        return '/usr/local/etc/dnsmasq.conf'
+    else:
+        return '/etc/dnsmasq.conf'
 
 def main():
     url = "https://pgl.yoyo.org/adservers/serverlist.php?showintro=0&mimetype=plaintext"
@@ -73,7 +79,7 @@ def main():
     ad_server = conf_dir + "/adserver_list"
     dns_conf = conf_dir + '/dnsmasq.conf'
     hostsfile = '/etc/hosts'
-    dnsmasq_config = '/usr/local/etc/dnsmasq.conf'
+    dnsmasq_config = dns_config_file()
     start_tag="## MAZA - List ad blocking"
     RED   = "\033[1;31m"  
     GREEN = "\033[0;32m"
