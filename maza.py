@@ -5,6 +5,7 @@ import re
 import os
 import argparse
 import sys
+import subprocess
 
 def download_file(url,ad_server):
     request = requests.get(url, allow_redirects=True)
@@ -48,6 +49,13 @@ def check_string_in_file(file_to_check, string):
                 return True
     return False
 
+def restart_dnsmasq():
+    sys.stdout.write("\033[0;32m")
+    subprocess.run(["brew", "services", "stop", "dnsmasq"])
+    print("service dnsmasq stopped")
+    subprocess.run(["brew", "services", "start", "dnsmasq"])
+    print("service dnsmasq started")
+    sys.stdout.write("\033[0;0m")
 
 def main():
     url = "https://pgl.yoyo.org/adservers/serverlist.php?showintro=0&mimetype=plaintext"
@@ -75,6 +83,7 @@ def main():
             download_file(url,ad_server)
             create_dnsmasq_conf(ad_server,dns_conf)
             update_etc_hosts(dns_conf, hostsfile)
+            restart_dnsmasq()
             sys.stdout.write(GREEN)
             print(f"confdir {conf_dir} was created")
             print("enabled")
@@ -89,6 +98,7 @@ def main():
             print("dnsmasq config created")
             update_etc_hosts(dns_conf, hostsfile)
             print("files has been updated")
+            restart_dnsmasq()
             sys.stdout.write(RESET)
     elif args.stop:
         clean_up_etc_hosts(hostsfile, dns_conf)
@@ -110,6 +120,7 @@ def main():
             os.remove(conf_dir + '/' + f_file)
             download_file(url,ad_server)
             create_dnsmasq_conf(ad_server,dns_conf)
+            restart_dnsmasq()
             sys.stdout.write(GREEN)
             print("files has been updated, sucessfully")
             sys.stdout.write(RESET)
