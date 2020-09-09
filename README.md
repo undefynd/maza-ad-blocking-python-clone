@@ -10,12 +10,12 @@ maza --install
 
 start
 ```dotnetcli
-maza --start
+sudo maza --start
 ```
 
 stop
 ```dotnetcli
-maza --stop
+sudo maza --stop
 ```
 
 status
@@ -25,7 +25,7 @@ maza --status
 udpate
 
 ```dotnetcli
-maza --update
+sudo maza --update
 ```
 
 help
