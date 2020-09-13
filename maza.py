@@ -7,6 +7,16 @@ import argparse
 import sys
 import subprocess
 
+def parser():
+    parser = argparse.ArgumentParser(description="change how the script behave by setting a flag")
+    parser.add_argument('--start', action='store_true', help='Activate blocking DNS.')
+    parser.add_argument('--stop', action='store_true', help='Deactivate blocking DNS.')
+    parser.add_argument('--status', action='store_true', help='Check if it\'s active or not')
+    parser.add_argument('--update', action='store_true', help='Update the list of DNS to be blocked')
+    parser.add_argument('--install', action='store_true', help='install dnsmasq on Mac or check if is installed and properarly configured')
+    
+    return parser
+
 def download_file(url,ad_server):
     request = requests.get(url, allow_redirects=True)
     with open(ad_server, 'wb') as f:
@@ -78,6 +88,15 @@ def dnsmasq_exe():
     else:
         return '/usr/sbin/dnsmasq'
 
+def update(url, ad_server, dns_conf):
+    sys.stdout.write('\033[0;32m')
+    download_file(url,ad_server)
+    print(f"{ad_server} downloaded")
+    create_dnsmasq_conf(ad_server,dns_conf)
+    print("dnsmasq config created")
+    restart_dnsmasq()
+    sys.stdout.write('\033[0;0m')
+
 def main():
     url = "https://pgl.yoyo.org/adservers/serverlist.php?showintro=0&mimetype=plaintext"
     conf_dir = os.getenv("HOME") + '/.maza' 
@@ -91,21 +110,13 @@ def main():
     GREEN = "\033[0;32m"
     RESET = "\033[0;0m"
 
-    parser = argparse.ArgumentParser(description="change how the script behave by setting a flag")
-    parser.add_argument('--start', action='store_true', help='Activate blocking DNS.')
-    parser.add_argument('--stop', action='store_true', help='Deactivate blocking DNS.')
-    parser.add_argument('--status', action='store_true', help='Check if it\'s active or not')
-    parser.add_argument('--update', action='store_true', help='Update the list of DNS to be blocked')
-    parser.add_argument('--install', action='store_true', help='install dnsmasq on Mac or check if is installed and properarly configured')
-    args = parser.parse_args()
+    args = parser().parse_args()
 
     if args.start:
         if not os.path.isdir(conf_dir):
             os.mkdir(conf_dir)
-            download_file(url,ad_server)
-            create_dnsmasq_conf(ad_server,dns_conf)
+            update(url, ad_server, dns_conf)
             update_etc_hosts(dns_conf, hostsfile)
-            restart_dnsmasq()
             sys.stdout.write(GREEN)
             print(f"confdir {conf_dir} was created")
             print("enabled")
@@ -113,14 +124,10 @@ def main():
         else:
             for f_file in os.listdir(conf_dir):
                 os.remove(conf_dir + '/' + f_file)
-            download_file(url,ad_server)
             sys.stdout.write(GREEN)
-            print(f"{ad_server} downloaded")
-            create_dnsmasq_conf(ad_server,dns_conf)
-            print("dnsmasq config created")
+            update(url, ad_server, dns_conf)
             update_etc_hosts(dns_conf, hostsfile)
             print("files has been updated")
-            restart_dnsmasq()
             sys.stdout.write(RESET)
     elif args.stop:
         clean_up_etc_hosts(hostsfile, dns_conf)
@@ -140,10 +147,8 @@ def main():
     elif args.update:
         for f_file in os.listdir(conf_dir):
             os.remove(conf_dir + '/' + f_file)
-            download_file(url,ad_server)
-            create_dnsmasq_conf(ad_server,dns_conf)
-            restart_dnsmasq()
             sys.stdout.write(GREEN)
+            update(url, ad_server, dns_conf)
             print("files has been updated, sucessfully")
             sys.stdout.write(RESET)
     elif args.install:
@@ -170,8 +175,7 @@ def main():
             else:
                 with open(dnsmasq_config, 'a') as dnsmasq_conf:
                     dnsmasq_conf.write("conf-file="+ dns_conf)
-
-   
+  
 
 if __name__ == "__main__":
     main()
