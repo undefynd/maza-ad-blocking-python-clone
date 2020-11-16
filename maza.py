@@ -20,7 +20,9 @@ def parser():
 def download_file(url,ad_server):
     request = requests.get(url, allow_redirects=True)
     with open(ad_server, 'wb') as f:
+        f.write(b'## MAZA - List ad blocking\n')
         f.write(request.content)       
+        f.write(b'## END MAZA\n')
 
 def create_dnsmasq_conf(ad_server,dns_conf):
     pat = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')
@@ -31,24 +33,28 @@ def create_dnsmasq_conf(ad_server,dns_conf):
                 f2.write('address=/' + line.split()[1] + '/' + line.split()[0] + '\n')
         f2.write('## END MAZA\n')
 
-def update_etc_hosts(dns_conf, hostsfile):
-    with open(dns_conf, 'r') as dns_conf, open(hostsfile, 'a') as hostfile:
-        for line in  dns_conf.readlines():
-            hostfile.write(line)
+def update_etc_hosts(ad_server, hostsfile):
+    pat = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')
+    with open(ad_server, 'r+') as f, open(hostsfile, 'a') as hostfile:
+        hostfile.write('## MAZA - List ad blocking\n')
+        for line in  f.readlines():
+            if pat.match(line):
+                hostfile.write(line)
+        hostfile.write('## END MAZA\n')
 
 def empty_dns_conf(dns_conf):
     with open(dns_conf, 'w') as f:
         f.seek(0)
         f.truncate()
 
-def clean_up_etc_hosts(hostsfile, dns_conf):
-    with open(hostsfile, "r") as hostsfile, open(dns_conf, 'r') as dns_file:
+def clean_up_etc_hosts(hostsfile, ad_server):
+    with open(hostsfile, "r") as hostsfile, open(ad_server, 'r') as ad_file:
         hostfile = hostsfile.readlines()
-        dnsfile = dns_file.readlines()
+        adfile = ad_file.readlines()
         hostsfile.close()
         hosts = open('/etc/hosts', "w")
         for line in hostfile:
-            if line not in dnsfile:
+            if line not in adfile:
                 hosts.write(line)
 
 def check_string_in_file(file_to_check, string):
@@ -88,12 +94,14 @@ def dnsmasq_exe():
     else:
         return '/usr/sbin/dnsmasq'
 
-def update(url, ad_server, dns_conf):
+def update(url, ad_server, dns_conf,hostsfile):
     sys.stdout.write('\033[0;32m')
     download_file(url,ad_server)
     print(f"{ad_server} downloaded")
     create_dnsmasq_conf(ad_server,dns_conf)
     print("dnsmasq config created")
+    clean_up_etc_hosts(hostsfile, ad_server)
+    update_etc_hosts(ad_server, hostsfile)
     restart_dnsmasq()
     sys.stdout.write('\033[0;0m')
 
@@ -115,8 +123,7 @@ def main():
     if args.start:
         if not os.path.isdir(conf_dir):
             os.mkdir(conf_dir)
-            update(url, ad_server, dns_conf)
-            update_etc_hosts(dns_conf, hostsfile)
+            update(url, ad_server, dns_conf, hostsfile)
             sys.stdout.write(GREEN)
             print(f"confdir {conf_dir} was created")
             print("enabled")
@@ -125,12 +132,11 @@ def main():
             for f_file in os.listdir(conf_dir):
                 os.remove(conf_dir + '/' + f_file)
             sys.stdout.write(GREEN)
-            update(url, ad_server, dns_conf)
-            update_etc_hosts(dns_conf, hostsfile)
+            update(url, ad_server, dns_conf, hostsfile)
             print("files has been updated")
             sys.stdout.write(RESET)
     elif args.stop:
-        clean_up_etc_hosts(hostsfile, dns_conf)
+        clean_up_etc_hosts(hostsfile, ad_server)
         empty_dns_conf(dns_conf)
         sys.stdout.write(RED)
         print("maze disabled")
@@ -148,7 +154,7 @@ def main():
         for f_file in os.listdir(conf_dir):
             os.remove(conf_dir + '/' + f_file)
             sys.stdout.write(GREEN)
-            update(url, ad_server, dns_conf)
+            update(url, ad_server, dns_conf, hostsfile)
             print("files has been updated, sucessfully")
             sys.stdout.write(RESET)
     elif args.install:
