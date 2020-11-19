@@ -138,6 +138,7 @@ def main():
     elif args.stop:
         clean_up_etc_hosts(hostsfile, ad_server)
         empty_dns_conf(dns_conf)
+        restart_dnsmasq()
         sys.stdout.write(RED)
         print("maze disabled")
         sys.stdout.write(RESET)
@@ -153,10 +154,10 @@ def main():
     elif args.update:
         for f_file in os.listdir(conf_dir):
             os.remove(conf_dir + '/' + f_file)
-            sys.stdout.write(GREEN)
-            update(url, ad_server, dns_conf, hostsfile)
-            print("files has been updated, sucessfully")
-            sys.stdout.write(RESET)
+        sys.stdout.write(GREEN)
+        update(url, ad_server, dns_conf, hostsfile)
+        print("files has been updated, successfully")
+        sys.stdout.write(RESET)
     elif args.install:
         if not os.path.isdir(dnsmasq_executeable):
             print(f"{dnsmasq_executeable} missing.")
